@@ -1,1 +1,77 @@
-<h1> In place matrix transpose </h1>
+<html>
+    <head>
+        <title> In-place matrix transpose </title>
+    </head>
+    <style>
+        .matrix {
+            margin: 10px;
+            padding: 10px;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+            border-radius: 10px 10px 10px 10px;
+        }
+        td {
+            padding: 4px;
+        }
+
+
+    </style>
+    <body>
+    <a href="../index.html">Main</a>
+    <h1>In-place matrix transpose</h1>
+
+    <h3> Background </h3>
+    <p style="max-width: 40%;">
+        While first getting my feet wet with concurrency, building a linear algebra library seemed like a pretty simple project to get started with. 
+        Many operations such as addition and multiplication in linear algebra lend themselves well to parallelization due to the mutually exclusive 
+        nature of their execution. For instance, adding two <i>M</i>x<i>N</i> matrices is simply adding each element in <i>M</i> to its corresponding element in the same position in matrix <i>N</i> 
+        Due to the independent nature of each addition operation, it is fairly straightforward to parallalize it. Similar parallelizable chunks exist when attempting to 
+        multiply two matrices. Given two matries A<sub><i>M</i>x<i>N</i></sub> and B<sub><i>M</i>x<i>N</i></sub>, we can determine their product  
+        <i>W</i> as <i>A</i><sup>T</sup><i>B</i>. However the challenge in this case is not the multiplication of the two matrices, but rather in the tranpose operation of A to A<sup>T</sup>. 
+        Confused? Let me explain!
+        <br/>
+        <br/>
+
+        When manipulating matrices for high-performance purposes, it is more efficient to store them as one-dimensional arrays rather than their natural 
+        two-dimensional form. For instance, a matrix A<sub>2x3</sub>:
+        
+        <table class="matrix">
+            <tr>
+                <td>2</td>
+                <td>3</td>
+                <td>5</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>6</td>
+                <td>9</td>
+            </tr>
+        </table>
+        
+
+        can be written as [2, 4, 3, 6, 5, 9] in column-major order. This allows the matrix to be stored contiguously in memory, hence enabling better
+        spatial locality and caching behavior. Access patterns that rely on sequential access of data (such as matrix addition and multiplication operations) benefit from this 
+        optimization. However, in order for the matrix multiplication operation to exploit this optimization, it is important for the transposed multiplicand to also be in sequential 
+        form. For example, let us assume that the previously mentioned  A<sub>2x3</sub> is the multiplicand in a matrix multiplication operation. Then A<sup>T</sup> is written as:
+        <table class="matrix">
+            <tr>
+                <td>2</td>
+                <td>4</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>6</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>9</td>
+            </tr>
+        </table>
+        
+        which, in its one-dimensional form, is stored in memory as [2, 3, 5, 4, 6, 9].
+
+        <br/>
+        <br/>
+        So the question is, how do we go from [2, 4, 3, 6, 5, 9] to [2, 3, 5, 4, 6, 9]?
+    </body>
+</html>
