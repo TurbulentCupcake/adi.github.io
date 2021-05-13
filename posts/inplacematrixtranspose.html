@@ -10,8 +10,18 @@
             border-right: 1px solid black;
             border-radius: 10px 10px 10px 10px;
         }
-        td {
-            padding: 4px;
+
+        .array {
+            font-size: 40px;
+        }
+
+        .displayarray {
+            text-align: center;
+        }
+
+        .code {
+            text-align: center;
+            margin: 20px;
         }
 
 
@@ -20,20 +30,22 @@
     <a href="../index.html">Main</a>
     <h1>In-place matrix transpose</h1>
 
-    <h3> Background </h3>
-    <p style="max-width: 40%;">
+    <h3>1. Background </h3>
+    <div style="max-width: 40%;">
+
+    <p >
         While first getting my feet wet with concurrency, building a linear algebra library seemed like a pretty simple project to get started with. 
         Many operations such as addition and multiplication in linear algebra lend themselves well to parallelization due to the mutually exclusive 
-        nature of their execution. For instance, adding two <i>M</i>x<i>N</i> matrices is simply adding each element in <i>M</i> to its corresponding element in the same position in matrix <i>N</i> 
+        nature of their execution. For instance, adding two  matrices <i>A</i> and <i>B</i> is simply adding each element in <i>A</i> to its corresponding element in the same position in matrix <i>B</i>. 
         Due to the independent nature of each addition operation, it is fairly straightforward to parallalize it. Similar parallelizable chunks exist when attempting to 
-        multiply two matrices. Given two matries A<sub><i>M</i>x<i>N</i></sub> and B<sub><i>M</i>x<i>N</i></sub>, we can determine their product  
-        <i>W</i> as <i>A</i><sup>T</sup><i>B</i>. However the challenge in this case is not the multiplication of the two matrices, but rather in the tranpose operation of A to A<sup>T</sup>. 
+        multiply two matrices. Given two matries <i>A</i><sub><i>m</i>x<i>n</i></sub> and <i>B</i><sub><i>m</i>x<i>n</i></sub>, we can determine their product  
+        <i>W</i> as <i>A</i><sup>T</sup><i>B</i>. However the challenge in this case is not the multiplication of the two matrices, but rather in the tranpose operation of <i>A</i> to <i>A</i><sup>T</sup>. 
         Confused? Let me explain!
         <br/>
         <br/>
 
         When manipulating matrices for high-performance purposes, it is more efficient to store them as one-dimensional arrays rather than their natural 
-        two-dimensional form. For instance, a matrix A<sub>2x3</sub>:
+        two-dimensional form. For instance, a matrix <i>A</i><sub>2x3</sub>:
         
         <table class="matrix">
             <tr>
@@ -49,10 +61,10 @@
         </table>
         
 
-        can be written as [2, 4, 3, 6, 5, 9] in column-major order. This allows the matrix to be stored contiguously in memory, hence enabling better
+        can be written as [2, 4, 3, 6, 5, 9] in column-major order. This allows the matrix to be stored contiguously in memory, thus enabling better
         spatial locality and caching behavior. Access patterns that rely on sequential access of data (such as matrix addition and multiplication operations) benefit from this 
-        optimization. However, in order for the matrix multiplication operation to exploit this optimization, it is important for the transposed multiplicand to also be in sequential 
-        form. For example, let us assume that the previously mentioned  A<sub>2x3</sub> is the multiplicand in a matrix multiplication operation. Then A<sup>T</sup> is written as:
+        optimization. However, in order for the matrix multiplication operation to exploit this optimization, it is important for the transposed multiplicand matrix to also be stored contiguously 
+        in memory. For example, let us assume that the previously mentioned  <i>A</i><sub>2x3</sub> is the multiplicand in a matrix multiplication operation. Then <i>A</i><sup>T</sup> is written as:
         <table class="matrix">
             <tr>
                 <td>2</td>
@@ -68,10 +80,151 @@
             </tr>
         </table>
         
-        which, in its one-dimensional form, is stored in memory as [2, 3, 5, 4, 6, 9].
+        which in its one-dimensional form is stored in memory as [2, 3, 5, 4, 6, 9].
 
         <br/>
         <br/>
         So the question is, how do we go from [2, 4, 3, 6, 5, 9] to [2, 3, 5, 4, 6, 9]?
+        <br/>
+        One option is to "read" the matrix as though it were transposed. In the matrix <i>A</i><sub>2x3</sub> discussed previously, this   
+        means reading every <code>numRows</code> consecutive position starting from 0 through <code>numRows</code>. In code, this looks like the following:
+     
+        
+        <br/>
+        <code>
+            <pre>
+            for(i = 0 ; i < numRows ; i++) { 
+              for(int j = i ; j < numRows*numCols ; j += numRows) {
+                    System.out.println(matA[j]);
+                }
+            }
+            </pre>
+        </code>
+
+        The drawback of this method is poor cache utilization. The code above moves <code>numRows</code> positions each access. 
+        If numRows is large enough, this can result in consecutive
+        cache misses, which in turn causes severe performance degradation as each new page has to be brought into cache. <br/> <br/>
+
+        Another option is to create a new array of the same size (eg: A_t) that fills in values into the array such that it is in transposed form.
+        However, we will be consuming memory twice the size of the original matrix making this option memory inefficient. Given a large enough matrix, we will potentially run
+        out of heap space to store its transpose. <br/> <br/>
+
+        Thus, our remaining option is to be able to transpose a matrix in-place. <br/> <br/>
+
+        <h2>2. Method</h2>
+
+        <p>
+            Transposing a matrix in-place is probably best explained using an example. Let us assume we are given a matrix <i>A</i><sub>2x4</sub> as follows:
+            <table class="matrix">
+                <tr>
+                    <td>1</td>
+                    <td>2</td>
+                    <td>3</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>6</td>
+                    <td>7</td>
+                    <td>8</td>
+                </tr>
+            </table>
+            <br/>
+            Assuming column major order,this matrix is stored in memory as [1, 5, 2, 6, 3, 7, 4, 8]. Its transpos, <i>A</i><sup>T</sup>  would be [1, 2, 3, 4, 5, 6, 7, 8]: 
+            <table class="matrix">
+                <tr>
+                    <td>1</td>
+                    <td>5</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>6</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>7</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>8</td>
+                </tr>
+            </table>
+            <br/>
+            <h3>2.1 Finding cycles</h3>
+
+            The trick is to find cycles in permutations of positions of the array containing the matrix. A cycle in this context is defined 
+            as a permutation of indexes such that the value at each index will shift to the next index in that cycle until each index in that
+            cycle has been visited. 
+            The challenge is to be able to locate each such cycle.
+            Let us illustrate with our matrix <i>A</i> as represented in its one-dimensional form below:  
+
+            <div class="displayarray">
+                <p class="array">[1, 5, 2, 6, 3, 7, 4, 8]</p>
+            </div>
+
+            For each position in the array, we can determine the next position in the cycle using the following formula:
+            
+            <div class="code" >
+                <code>
+                    nextPos = numCols*currPos % (numCols*numRows - 1) 
+                </code>
+                s.t <code>currPos</code> != <code>numCols*numRows - 1</code>
+            </div>
+
+            Using this formula, let us determine one such cycle starting at index 1 (<code>currPos = 1</code>). Given that <code>numRows = 2</code> and 
+            <code>numCols = 4</code>, the following table describes the construction of that cycle :
+
+
+            <table style="width:100%">
+                <tr>
+                  <th><code>currPos</code></th>
+                  <th><code>numCols*currPos % (numCols*numRows - 1)</code></th> 
+                  <th><code>nextPos</code></th>
+                </tr>
+                <tr>
+                  <td style="text-align: center;">1</td>
+                  <td style="text-align: center;">4*1 % (2*4 - 1)</td>
+                  <td style="text-align: center;">4</td>
+                </tr>
+                <tr>
+                  <td style="text-align: center;">4</td>
+                  <td style="text-align: center;">4*4 % (2*4 - 1)</td>
+                  <td style="text-align: center;">2</td>
+                </tr>
+                <tr>
+                  <td style="text-align: center;">2</td>
+                  <td style="text-align: center;">4*2 % (2*4 - 1)</td>
+                  <td style="text-align: center;">1</td>
+                </tr>
+              </table>
+
+              When <code>nextPos</code> returns to the original index, we have obtained a cycle. From the table above, we can determine
+              that the cycle beginning at position 1 is (1, 2, 4). This translates to the following moves:
+              <pre><code>    A[1] -> A[4]
+    A[4] -> A[2]
+    A[2] -> A[1]
+              </code></pre> 
+              
+              As a result of the three-way swap, our original array (with values affected by positions in the cycle indicated in red) :
+
+            <div class="displayarray">
+                <p class="array">[1, <font color="red">5</font>, <font color="red">2</font>, 6, <font color="red">3</font>, 7, 4, 8]</p>
+            </div>
+
+            Now looks like this: 
+
+            <div class="displayarray">
+                <p class="array">[1, <font color="lightgreen">2</font>, <font color="lightgreen">3</font>, 6, <font color="lightgreen">5</font>, 7, 4, 8]</p>
+            </div>
+
+            Thats pretty cool! We can see our transposed array coming together!
+            
+
+
+        </p>
+
+    </p>
+    </div>
+
     </body>
 </html>
