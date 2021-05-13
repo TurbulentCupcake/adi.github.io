@@ -153,8 +153,7 @@
             <h3>2.1 Finding cycles</h3>
 
             The trick is to find cycles in permutations of positions of the array containing the matrix. A cycle in this context is defined 
-            as a permutation of indexes such that the value at each index will shift to the next index in that cycle until each index in that
-            cycle has been visited. 
+            as a permutation of indexes such that the value at each index will shift to the next index in that cycle until each index been visited. 
             The challenge is to be able to locate each such cycle.
             Let us illustrate with our matrix <i>A</i> as represented in its one-dimensional form below:  
 
@@ -168,7 +167,7 @@
                 <code>
                     nextPos = numCols*currPos % (numCols*numRows - 1) 
                 </code>
-                s.t <code>currPos</code> != <code>numCols*numRows - 1</code>
+                s.t <code>currPos</code> != <code>numCols*numRows - 1</code> (F2.1)
             </div>
 
             Using this formula, let us determine one such cycle starting at index 1 (<code>currPos = 1</code>). Given that <code>numRows = 2</code> and 
@@ -205,19 +204,33 @@
     A[2] -> A[1]
               </code></pre> 
               
-              As a result of the three-way swap, our original array (with values affected by positions in the cycle indicated in red) :
+              As a result of the three-way swap, our original array (with values at indexes present in the cycle indicated in red) :
 
             <div class="displayarray">
                 <p class="array">[1, <font color="red">5</font>, <font color="red">2</font>, 6, <font color="red">3</font>, 7, 4, 8]</p>
             </div>
 
-            Now looks like this: 
+            Now becomes this: 
 
             <div class="displayarray">
                 <p class="array">[1, <font color="lightgreen">2</font>, <font color="lightgreen">3</font>, 6, <font color="lightgreen">5</font>, 7, 4, 8]</p>
             </div>
 
             Thats pretty cool! We can see our transposed array coming together!
+
+            In this manner, we can locate other sets of cycles by applying the formula defined in F2.1 to unvisited indexes. As a result, we obtain
+            the cycle (3, 5, 6) by starting at index 3. Applying the same idea of shifting values at a given index to the next consecutive index as indicated 
+            by the cycle to the positions highighted in red:
+
+            <div class="displayarray">
+                <p class="array">[1, 2, 3, <font color="red">6</font>, 5, <font color="red">7</font>, <font color="red">4</font>, 8]</p>
+            </div>
+
+            We obtain the final transposed matrix:
+            
+            <div class="displayarray">
+                <p class="array">[1, 2, 3, <font color="lightgreen">4</font>, 5, <font color="lightgreen">6</font>, <font color="lightgreen">7</font>, 8]</p>
+            </div>
             
 
 
