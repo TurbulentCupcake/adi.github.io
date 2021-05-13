@@ -44,7 +44,7 @@
         <br/>
         <br/>
 
-        When manipulating matrices for high-performance purposes, it is more efficient to store them as one-dimensional arrays rather than their natural 
+        When manipulating matrices for high-performance purposes, it is more efficient to store them as one-dimensional arrays rather than their commonly used 
         two-dimensional form. For instance, a matrix <i>A</i><sub>2x3</sub>:
         
         <table class="matrix">
@@ -101,7 +101,7 @@
             </pre>
         </code>
 
-        The drawback of this method is poor cache utilization. The code above moves <code>numRows</code> positions each access. 
+        The drawback of this method is poor cache utilization. The code above reads every <code>numRows</code><sup>th</sup> position each access. 
         If numRows is large enough, this can result in consecutive
         cache misses, which in turn causes severe performance degradation as each new page has to be brought into cache. <br/> <br/>
 
@@ -109,12 +109,12 @@
         However, we will be consuming memory twice the size of the original matrix making this option memory inefficient. Given a large enough matrix, we will potentially run
         out of heap space to store its transpose. <br/> <br/>
 
-        Thus, our remaining option is to be able to transpose a matrix in-place. <br/> <br/>
+        Thus, our remaining option is to transpose a matrix in-place. <br/> <br/>
 
         <h2>2. Method</h2>
 
         <p>
-            Transposing a matrix in-place is probably best explained using an example. Let us assume we are given a matrix <i>A</i><sub>2x4</sub> as follows:
+            Transposing a matrix in-place is best explained using an example. Let us assume we are given a matrix <i>A</i><sub>2x4</sub> as follows:
             <table class="matrix">
                 <tr>
                     <td>1</td>
@@ -130,7 +130,7 @@
                 </tr>
             </table>
             <br/>
-            Assuming column major order,this matrix is stored in memory as [1, 5, 2, 6, 3, 7, 4, 8]. Its transpos, <i>A</i><sup>T</sup>  would be [1, 2, 3, 4, 5, 6, 7, 8]: 
+            Assuming column major order,this matrix is stored in memory as [1, 5, 2, 6, 3, 7, 4, 8]. Its transpose, <i>A</i><sup>T</sup>  would be [1, 2, 3, 4, 5, 6, 7, 8]: 
             <table class="matrix">
                 <tr>
                     <td>1</td>
@@ -152,7 +152,7 @@
             <br/>
             <h3>2.1 Finding cycles</h3>
 
-            The trick is to find cycles in permutations of positions of the array containing the matrix. A cycle in this context is defined 
+            The trick is to find cycles in permutations of indexes of the array containing the matrix. A cycle in this context is defined 
             as a permutation of indexes such that the value at each index will shift to the next index in that cycle until each index been visited. 
             The challenge is to be able to locate each such cycle.
             Let us illustrate with our matrix <i>A</i> as represented in its one-dimensional form below:  
@@ -197,8 +197,8 @@
                 </tr>
               </table>
 
-              When <code>nextPos</code> returns to the original index, we have obtained a cycle. From the table above, we can determine
-              that the cycle beginning at position 1 is (1, 2, 4). This translates to the following moves:
+              When <code>nextPos</code> returns to the original index ('1' in this case), we have obtained a cycle. From the table above, we can determine
+              that the cycle beginning at index 1 is (1, 2, 4). This translates to the following moves:
               <pre><code>    A[1] -> A[4]
     A[4] -> A[2]
     A[2] -> A[1]
@@ -220,7 +220,7 @@
 
             In this manner, we can locate other sets of cycles by applying the formula defined in F2.1 to unvisited indexes. As a result, we obtain
             the cycle (3, 5, 6) by starting at index 3. Applying the same idea of shifting values at a given index to the next consecutive index as indicated 
-            by the cycle to the positions highighted in red:
+            by the cycle, to the positions highighted in red:
 
             <div class="displayarray">
                 <p class="array">[1, 2, 3, <font color="red">6</font>, 5, <font color="red">7</font>, <font color="red">4</font>, 8]</p>
@@ -231,6 +231,8 @@
             <div class="displayarray">
                 <p class="array">[1, 2, 3, <font color="lightgreen">4</font>, 5, <font color="lightgreen">6</font>, <font color="lightgreen">7</font>, 8]</p>
             </div>
+
+            <h3>2.2 Implementation in Java</h3>
             
 
 
