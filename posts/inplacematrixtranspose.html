@@ -86,8 +86,7 @@
         <br/>
         So the question is, how do we go from [2, 4, 3, 6, 5, 9] to [2, 3, 5, 4, 6, 9]?
         <br/>
-        One option is to "read" the matrix as though it were transposed. In the matrix <i>A</i><sub>2x3</sub> discussed previously, this   
-        means reading every <code>numRows</code> consecutive position starting from 0 through <code>numRows</code>. In code, this looks like the following:
+        One option is to "read" the matrix as though it were transposed, as done in the code below: 
      
         
         <br/>
@@ -106,7 +105,7 @@
         cache misses, which in turn causes severe performance degradation as each new page has to be brought into cache. <br/> <br/>
 
         Another option is to create a new array of the same size (eg: A_t) that fills in values into the array such that it is in transposed form.
-        However, we will be consuming memory twice the size of the original matrix making this option memory inefficient. Given a large enough matrix, we will potentially run
+        However, this would mean consuming twice the memory of the original matrix. Given a large enough matrix, we will potentially run
         out of heap space to store its transpose. <br/> <br/>
 
         Thus, our remaining option is to transpose a matrix in-place. <br/> <br/>
@@ -130,7 +129,7 @@
                 </tr>
             </table>
             <br/>
-            Assuming column major order,this matrix is stored in memory as [1, 5, 2, 6, 3, 7, 4, 8]. Its transpose, <i>A</i><sup>T</sup>  would be [1, 2, 3, 4, 5, 6, 7, 8]: 
+            Assuming column major order, this matrix is stored in memory as [1, 5, 2, 6, 3, 7, 4, 8]. Its transpose, <i>A</i><sup>T</sup>  would be [1, 2, 3, 4, 5, 6, 7, 8]: 
             <table class="matrix">
                 <tr>
                     <td>1</td>
@@ -175,6 +174,7 @@
 
 
             <table style="width:100%">
+                <caption>Table 1.</caption>
                 <tr>
                   <th><code>currPos</code></th>
                   <th><code>numCols*currPos % (numCols*numRows - 1)</code></th> 
@@ -232,8 +232,148 @@
                 <p class="array">[1, 2, 3, <font color="lightgreen">4</font>, 5, <font color="lightgreen">6</font>, <font color="lightgreen">7</font>, 8]</p>
             </div>
 
-            <h3>2.2 Implementation in Java</h3>
-            
+            <h3>2.2 Implementation </h3>
+
+            While the logic described here can be applied to any programming language, i've used Java because that's the language I am (currently) most comfortable with.
+            <br/> <br/>
+
+            The first step in transposing is to find cycles, as described in section 2.1. To quote the Wikipedia article on this topic (sincere apologies my English teachers), 
+            psuedocode would typically involve iterating over each cycle, as below: 
+            <pre>
+    <code>
+        for each length>1 cycle C of the permutation
+        pick a starting address s in C
+        let D = data at s
+        let x = predecessor of s in the cycle
+        while x ≠ s
+            move data from x to successor of x
+            let x = predecessor of x
+        move data from D to successor of s
+    </code>
+            </pre>
+
+            However, it is inefficient to prediscover cycles for two reasons:
+            <ol>
+                <li>It would require additional space approximately equal to the size of the array to be transposed, since we 
+                    will need to store cycle sets that contain every index in the array (caveat in the discussion section).
+                </li>
+                <li>
+                    Even if we did use an additional space to store cycle sets, we would be iterating through the the array once again. 
+                </li>
+            </ol>
+
+            <br/>
+
+            Solution? Find cycles on the fly! You can find the code for this implementation <a href="https://github.com/TurbulentCupcake/java-concurrenc/blob/287ceafadfff59540cbe035145cc5b1352d1fd3e/concurrency/src/main/java/com/adi/concurrency/matrix/MatrixMethods.java#L170">here</a>,
+            also pasted below. 
+
+            <pre>
+                <code>
+1         for(int i = start; i < end ; i++) {
+2 
+3             int bytePos = i/Byte.SIZE; // locate the position at which the byte for this array is located
+4             if((visitedArray[bytePos] & (1 << (i%Byte.SIZE))) == 0) {
+5                 int firstPos = i;
+6                 int nextPos = getNextPosition(numCols, firstPos, valueCount);
+7                 int terminalPos = nextPos;
+8                 int v1 = m[firstPos];
+9                 int v2 = m[nextPos];
+10                 int temp = 0;
+11                 do { // replace with more concrete condition
+12 
+13                     // fix value
+14                     m[nextPos] = v1;
+15 
+16                     // set nextPos bit in visitedArray
+17                     bytePos = nextPos/Byte.SIZE;
+18                     visitedArray[bytePos] |= (1 << (nextPos%Byte.SIZE));
+19 
+20                     // compute next position
+21                     nextPos = getNextPosition(numCols, nextPos, valueCount);
+22 
+23                     // do the swap
+24                     temp = v2;
+25                     v2 = m[nextPos];
+26                     v1 = temp;
+27 
+28                 } while (nextPos != terminalPos);
+29 
+30             }
+31         }
+                </code>
+            </pre>
+
+            In essence, the code above treats every index as the start of a new cycle set. If the index has already been visited (already part of a cycle), it attempts to locate a new cycle from the next index.
+            Starting at each index, the next index to be added to the cycle set is located using <code><a href="https://github.com/TurbulentCupcake/java-concurrenc/blob/287ceafadfff59540cbe035145cc5b1352d1fd3e/concurrency/src/main/java/com/adi/concurrency/matrix/MatrixMethods.java#L213">getNextPosition</a> </code>and its value is 
+            saved. The value at the original index is then placed at the index located by <code>getNextPosition</code>. In this manner, we move the value at each index to the next one until we return to the index at which we initiated the cycle.
+            <br/>
+            <br/>
+
+            Using our original example from 2.1, we use the matrix <i>A</i> as given below in its one-dimensional form. Let us call it <code>m</code>:
+
+
+            <div class="displayarray">
+                <p class="array">[1, 5, 2, 6, 3, 7, 4, 8]</p>
+            </div>
+
+            Starting at <code>i = 1</code> (ignore the condition at 4 for now), we derive that <code>getNextPosition</code> returns 4 (refer to Table 1.). 
+            Thus, <code>firstPos = 1</code> and <code>nextPos = 4</code> and as a result <code>v1 = 5</code> and <code>v2 = 3</code>. Once we enter the <code>do-while</code>. 
+            We set the value at <code>nextPos</code> to v1. Thus, <code>m</code> at this point is as follows:
+
+            <div class="displayarray">
+                <p class="array">[1, 5, 2, 6, <font color="red">5</font>, 7, 4, 8]</p>
+            </div>
+
+            At this point, we recompute the next position at line 21. This time, we determine that <code>nextPos = 2</code>. In lines 23 - 25, we do a swap where we store the value of <code>v2</code> in <code>v1</code> and store the value at <code>nextPos</code> into <code>v2</code>.
+            We do this because at the next iteration of the loop, line 14 sets <code>m[2] = 3</code> and <code>v2 = 2</code>. This translates to the following:
+            <div class="displayarray">
+                <p class="array">[1, 5, <font color="red">3</font>, 6, 5, 7, 4, 8]</p>
+            </div>
+
+            Repeating the same process, arrive at the following.
+
+            <div class="displayarray">
+                <p class="array">[1, <font color="red">2</font>, 3, 6, 5, 7, 4, 8]</p>
+            </div>
+
+            In the last iteration of the loop, <code>terminalPos = nextPos = 4</code> which signals the end our cycle. At this point, values at each index have been shifted to the next index as indicated by the cycle set.
+
+            <br/>
+            <br/>
+            In the next iteration of the loop in line 1, <code>i = 2</code>. However, we have already visited this index as part of the cycle set beginning at <code>i = 1</code>. In order to keep track of visited indexes, 
+            we use a byte array where each bit represents whether an index has been visited as part of a cycle set. Thus, we create a byte array <code>visitedArray</code> of size <code>numCols*numRows/sizeof(byte)</code> bytes to record 
+            whether a value at each index has been visited. 
+
+            <br/>
+            We determine the bit corresponding to an index by first locating the byte to which it belongs, done at line 3. In line 4, <code>i%Byte.SIZE</code> gives us the exact bit corresponding to our index in the <code>bytePos</code> byte.
+            Line 4 as a whole essentially checks whether the bit corresponding to the index <code>i</code> is set to 0, if so it is unvisited and has not already been included in a cycle set. Similarly, line 21 sets the bit corresponding to <code>nextPos</code>
+            in <code>visitedArray</code> once the value at the <code>nextPos</code> index has been set.
+
+        <h3>3. Discussion</h3>
+
+        While the initial intent of this exercise was to perform the matrix transpose operation without utilizing additional memory, 
+        its probably worth noting that the transpose method described here itself is difficult to parallelize. 
+        Unsynchronized writes to values at indexes described in a single cycle can cause data races. Taking the example of the matrix <code>m</code> in 2.2, 
+        if we had a thread T1 that attempts to discover a cycle set starting at index 1 and a thread T2 that starts at index 2,  its possible that T2 is scheduled before T1 thus writing 2 to index 1 which 
+        is then read by T1 and written to index 4. 
+        For this reason, predetermining cycle sets enables us to provide better synchronization guarantees and prevent any potential race conditions by providing each thread a set of
+        cycle sets to process.
+        
+        <br/><br/>
+
+        As it stands, the method described here is not the most efficient and certainly has room for imporvement. If you found a bug/logical flaw/improvement, feel free reach out to me at my <a href="mailto:muraliadithya315@gmail.com"> email</a>.
+        <h3> References </h3>
+        
+        <ol>
+            <li>Esko G. Cate and David W. Twigg. 1977. Algorithm 513: Analysis of In-Situ Transposition [F1]. ACM Trans. Math. Softw. 3, 1 (March 1977), 104–110. DOI:https://doi.org/10.1145/355719.355729
+            </li>
+            <li>Wikipedia contributors. "In-place matrix transposition." Wikipedia, The Free Encyclopedia. Wikipedia, The Free Encyclopedia, 23 Jun. 2020. Web. 16 May. 2021. </li>
+        </ol>
+
+      
+
+
+
 
 
         </p>
