@@ -1,0 +1,87 @@
+<html>
+    <title>
+        kotlin lambda wtf?
+    </title>
+    <body>
+        <a href="../index.html">Main</a>
+        <h1>Does Kotlin get how lambda's work?</h1>
+        
+        <div style="max-width: 40%;">
+            <p>
+                I must begin this mini rant(?) by noting that I am still learning Kotlin as a Java programmer. Thus, my understanding of the underlying
+                 mechanics of Kotlin is nascent as of this writing. 
+                <br/>
+                That being said, I find Kotlin's implementation of lambda mechanics a bit confounding. Let's start with an example straight from the <a href='https://kotlinlang.org/docs/returns.html#return-at-labels'>horse's mouth</a>:
+                <pre>
+                    <code>
+        fun foo() {
+            listOf(1, 2, 3, 4, 5).forEach {
+                if (it == 3) return // non-local return directly to the caller of foo()
+                print(it)
+            }
+            println("this point is unreachable")
+        }
+
+        fun main() {
+            foo()
+        }
+                    </code>
+                </pre>
+                Which prints out <code>12</code>.
+                As mentioned in the comment, the <code>return</code> statement returns from the function <code>foo()</code> to its caller. 
+                Which... if you think about it for a second ....  is not how lambda expressions work? <br/>
+                The equivalent(?) java code is as follows: 
+
+                <pre>
+                    <code>
+        public static void main(String[] args) {
+            foo();
+        }
+    
+        public static void foo() {
+    
+            ArrayList<Integer> arrayList = new ArrayList<>();
+            Collections.addAll(arrayList, 1, 2, 3, 4, 5);
+            arrayList.forEach(it -> {
+                if(it == 3) return;
+                System.out.println(it);
+            });
+    
+            System.out.println("Reached here");
+    
+        }
+                    </code>
+                </pre>
+
+                which prints out the following:
+
+                <pre>
+                    <code>
+    1
+    2
+    4
+    5
+    Reached here
+                    </code>
+                </pre>
+
+                Which makes sense because lambda expressions do not and <i>should not</i> have context of the calling code other than any
+                parameters passed to them. In both langauges, the caller of the lambda is the <code>forEach</code> and not the <code>foo()</code>.
+                So <i>why on earth should a lamda expression</i> <code>return</code> <i>to</i> <code>foo()</code> <i>and not the</i> <code>forEach</code>?
+                In Kotlin's defense, they do say that <a href="https://kotlinlang.org/docs/returns.html#return-at-labels">"such non-local returns are supported only for lambda expressions passed to inline functions"</a>.
+                However, why is this the default behavior for inline functions? Why must I then <a href="https://kotlinlang.org/docs/returns.html#return-at-labels">annotate</a> my lambda to get the expected
+                lambda behavior? In fact, why does this behavior exist at all? 
+                <br/>
+                <br/>
+                Don't even get me started on the lack of checked exceptions...
+                <br/>
+                /rant over
+            
+
+            </p>
+
+        </div>
+
+    </body>
+
+</html>
