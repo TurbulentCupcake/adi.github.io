@@ -65,8 +65,8 @@
                     </code>
                 </pre>
 
-                Which makes sense because lambda expressions do not and <i>should not</i> have context of the calling code other than any
-                parameters passed to them. In both langauges, the caller of the lambda is the <code>forEach</code> and not the <code>foo()</code>.
+                Which makes sense because lambda expressions do not and <i>should not</i> have context of callers or variables outside the scope of the calling code other than any
+                parameters passed to the lambda itself. In both langauges, the caller of the lambda is the <code>forEach</code> and not the <code>foo()</code>.
                 So <i>why on earth should a lamda expression</i> <code>return</code> <i>to</i> <code>foo()</code> <i>and not the</i> <code>forEach</code>?
                 In Kotlin's defense, they do say that <a href="https://kotlinlang.org/docs/returns.html#return-at-labels">"such non-local returns are supported only for lambda expressions passed to inline functions"</a>.
                 However, why is this the default behavior for inline functions? Why must I then <a href="https://kotlinlang.org/docs/returns.html#return-at-labels">annotate</a> my lambda to get the expected
